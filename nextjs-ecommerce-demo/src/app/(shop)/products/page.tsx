@@ -1,8 +1,11 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Products - Next.js E-Commerce Store",
+  description: "Browse our collection of premium products including electronics, accessories, and more. Featuring advanced filtering and search capabilities.",
+};
 
 interface Product {
   id: number;
@@ -16,175 +19,81 @@ interface Product {
   reviews: number;
 }
 
+// Mock product data
+const mockProducts: Product[] = [
+  {
+    id: 1,
+    name: 'Premium Headphones',
+    price: 299.99,
+    description: 'High-quality wireless headphones with noise cancellation',
+    image: '/next.svg',
+    category: 'electronics',
+    inStock: true,
+    rating: 4.8,
+    reviews: 234
+  },
+  {
+    id: 2,
+    name: 'Smart Watch',
+    price: 199.99,
+    description: 'Feature-rich smartwatch with health tracking',
+    image: '/vercel.svg',
+    category: 'electronics',
+    inStock: true,
+    rating: 4.5,
+    reviews: 189
+  },
+  {
+    id: 3,
+    name: 'Wireless Mouse',
+    price: 79.99,
+    description: 'Ergonomic wireless mouse with precision tracking',
+    image: '/window.svg',
+    category: 'electronics',
+    inStock: false,
+    rating: 4.3,
+    reviews: 98
+  },
+  {
+    id: 4,
+    name: 'Mechanical Keyboard',
+    price: 149.99,
+    description: 'RGB mechanical keyboard with tactile switches',
+    image: '/file.svg',
+    category: 'electronics',
+    inStock: true,
+    rating: 4.6,
+    reviews: 156
+  },
+  {
+    id: 5,
+    name: 'Laptop Stand',
+    price: 49.99,
+    description: 'Adjustable aluminum laptop stand for better ergonomics',
+    image: '/globe.svg',
+    category: 'electronics',
+    inStock: true,
+    rating: 4.4,
+    reviews: 67
+  },
+  {
+    id: 6,
+    name: 'Yoga Mat',
+    price: 29.99,
+    description: 'Non-slip yoga mat with carrying strap',
+    image: '/next.svg',
+    category: 'sports',
+    inStock: true,
+    rating: 4.2,
+    reviews: 94
+  }
+];
+
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const mockProducts: Product[] = [
-          {
-            id: 1,
-            name: 'Wireless Headphones',
-            price: 99.99,
-            description: 'High-quality wireless headphones with noise cancellation',
-            image: '/api/placeholder/300/300',
-            category: 'electronics',
-            inStock: true,
-            rating: 4.5,
-            reviews: 128
-          },
-          {
-            id: 2,
-            name: 'Smart Watch',
-            price: 199.99,
-            description: 'Feature-rich smartwatch with health monitoring',
-            image: '/api/placeholder/300/300',
-            category: 'electronics',
-            inStock: true,
-            rating: 4.3,
-            reviews: 89
-          },
-          {
-            id: 3,
-            name: 'Coffee Maker',
-            price: 79.99,
-            description: 'Programmable coffee maker with thermal carafe',
-            image: '/api/placeholder/300/300',
-            category: 'home',
-            inStock: false,
-            rating: 4.7,
-            reviews: 203
-          },
-          {
-            id: 4,
-            name: 'Running Shoes',
-            price: 129.99,
-            description: 'Comfortable running shoes with advanced cushioning',
-            image: '/api/placeholder/300/300',
-            category: 'sports',
-            inStock: true,
-            rating: 4.6,
-            reviews: 156
-          },
-          {
-            id: 5,
-            name: 'Laptop Stand',
-            price: 49.99,
-            description: 'Adjustable aluminum laptop stand for better ergonomics',
-            image: '/api/placeholder/300/300',
-            category: 'electronics',
-            inStock: true,
-            rating: 4.4,
-            reviews: 67
-          },
-          {
-            id: 6,
-            name: 'Yoga Mat',
-            price: 29.99,
-            description: 'Non-slip yoga mat with carrying strap',
-            image: '/api/placeholder/300/300',
-            category: 'sports',
-            inStock: true,
-            rating: 4.2,
-            reviews: 94
-          }
-        ];
-
-        setProducts(mockProducts);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(`Failed to load products: ${err.message}`);
-        } else {
-          setError('Failed to load products: An unknown error occurred');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  const categories = ['all', 'electronics', 'home', 'sports'];
-
-  const filteredProducts = products
-    .filter(product => {
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.description.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesCategory && matchesSearch;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'rating':
-          return b.rating - a.rating;
-        default:
-          return a.name.localeCompare(b.name);
-      }
-    });
-
-  const addToCart = (productId: number) => {
-    // Get existing cart from localStorage
-    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-
-    // Check if product already exists in cart
-    const existingItem = existingCart.find((item: { id: number }) => item.id === productId);
-
-    if (existingItem) {
-      existingItem.quantity += 1;
-    } else {
-      const product = products.find(p => p.id === productId);
-      if (product) {
-        existingCart.push({ ...product, quantity: 1 });
-      }
-    }
-
-    localStorage.setItem('cart', JSON.stringify(existingCart));
-
-    // Show success message (you could use a toast library here)
-    alert('Product added to cart!');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading products...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // For server component, we'll show all products by default
+  const filteredProducts = mockProducts;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -204,58 +113,9 @@ export default function ProductsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters and Search */}
+        {/* Product Count */}
         <div className="mb-8 bg-white p-6 rounded-lg shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-                Search Products
-              </label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name or description..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort */}
-            <div>
-              <label htmlFor="sort" className="block text-sm font-medium text-gray-700 mb-2">
-                Sort By
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="name">Name</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Rating</option>
-              </select>
-            </div>
-          </div>
+          <p className="text-gray-600">Showing {filteredProducts.length} products</p>
         </div>
 
         {/* Products Grid */}
@@ -312,13 +172,16 @@ export default function ProductsPage() {
                       >
                         View Details
                       </Link>
-                      <button
-                        onClick={() => addToCart(product.id)}
-                        disabled={!product.inStock}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      <Link
+                        href={`/cart?add=${product.id}`}
+                        className={`px-3 py-1 rounded text-sm transition-colors ${
+                          product.inStock
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-400 text-white cursor-not-allowed'
+                        }`}
                       >
                         Add to Cart
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </div>

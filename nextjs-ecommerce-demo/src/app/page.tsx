@@ -1,5 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home - Next.js E-Commerce Store",
+  description: "Welcome to our Next.js E-Commerce Store showcasing modern web development features including Server Components, Static Generation, and more.",
+};
 
 // Mock product data to showcase Next.js features
 const featuredProducts = [

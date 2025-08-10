@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Shopping Cart - Next.js E-Commerce Store",
+  description: "Review and manage items in your shopping cart. Secure checkout with real-time calculations and inventory management.",
+};
 
 // Cart item interface
 interface CartItem {

@@ -1,4 +1,10 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Page Not Found - Next.js E-Commerce Store",
+  description: "The page you're looking for doesn't exist. Browse our products or return to the homepage to continue shopping.",
+};
 
 export default function NotFound() {
   return (

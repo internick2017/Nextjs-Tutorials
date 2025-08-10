@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "API Demo - Next.js E-Commerce Store",
+  description: "Interactive demonstration of Next.js API routes with full CRUD operations, dynamic routing, and real-time data management.",
+};
 
 // Interface for API response
 interface ApiResponse<T> {

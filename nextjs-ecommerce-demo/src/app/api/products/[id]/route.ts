@@ -76,7 +76,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = parseInt(params.id);
+    const { id } = await params;
+    const productId = parseInt(id);
 
     // Validate ID
     if (isNaN(productId)) {
@@ -131,7 +132,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = parseInt(params.id);
+    const { id } = await params;
+    const productId = parseInt(id);
     const body = await request.json();
 
     // Validate ID
@@ -213,7 +215,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = parseInt(params.id);
+    const { id } = await params;
+    const productId = parseInt(id);
 
     // Validate ID
     if (isNaN(productId)) {
@@ -274,7 +277,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const productId = parseInt(params.id);
+    const { id } = await params;
+    const productId = parseInt(id);
     const body = await request.json();
 
     // Validate ID

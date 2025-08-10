@@ -79,7 +79,8 @@ export async function generateStaticParams() {
 
 // Generate metadata for each product page
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const product = products.find(p => p.id === parseInt(params.id));
+  const { id } = await params;
+  const product = products.find(p => p.id === parseInt(id));
 
   if (!product) {
     return {
@@ -94,8 +95,9 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 }
 
 // Product detail page component
-export default function ProductPage({ params }: Readonly<{ params: { id: string } }>) {
-  const productId = parseInt(params.id);
+export default async function ProductPage({ params }: Readonly<{ params: { id: string } }>) {
+  const { id } = await params;
+  const productId = parseInt(id);
   const product = products.find(p => p.id === productId);
 
   // If product not found, show 404

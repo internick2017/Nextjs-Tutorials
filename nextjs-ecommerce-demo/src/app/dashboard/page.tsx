@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Dashboard - Next.js E-Commerce Store",
+  description: "Admin dashboard with analytics, order management, and user insights. Featuring protected routes and real-time data visualization.",
+};
 
 // Mock user data
 interface User {
