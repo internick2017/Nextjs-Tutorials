@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useErrorHandler } from '../../components/ErrorBoundary';
+import { handleClientError } from '../../lib/errorHandler';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 
@@ -33,6 +35,7 @@ export default function ApiDemoPage() {
   const [loading, setLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [apiResponse, setApiResponse] = useState<string>('');
+  const { handleError } = useErrorHandler();
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
@@ -60,7 +63,8 @@ export default function ApiDemoPage() {
         setApiResponse(`❌ ${result.error || 'Failed to fetch products'}`);
       }
     } catch (error) {
-      setApiResponse(`❌ Network error: ${error}`);
+      const errorId = handleError(error as Error, { action: 'fetchProducts' });
+      setApiResponse(`❌ Network error: ${error} (ID: ${errorId})`);
     } finally {
       setLoading(false);
     }
@@ -83,7 +87,8 @@ export default function ApiDemoPage() {
         setSelectedProduct(null);
       }
     } catch (error) {
-      setApiResponse(`❌ Network error: ${error}`);
+      const errorId = handleError(error as Error, { action: 'fetchProduct' });
+      setApiResponse(`❌ Network error: ${error} (ID: ${errorId})`);
       setSelectedProduct(null);
     } finally {
       setLoading(false);
@@ -124,7 +129,8 @@ export default function ApiDemoPage() {
         setApiResponse(`❌ ${result.error || 'Failed to create product'}`);
       }
     } catch (error) {
-      setApiResponse(`❌ Network error: ${error}`);
+      const errorId = handleError(error as Error, { action: 'createProduct' });
+      setApiResponse(`❌ Network error: ${error} (ID: ${errorId})`);
     } finally {
       setLoading(false);
     }
@@ -159,7 +165,8 @@ export default function ApiDemoPage() {
         setApiResponse(`❌ ${result.error || 'Failed to update stock'}`);
       }
     } catch (error) {
-      setApiResponse(`❌ Network error: ${error}`);
+      const errorId = handleError(error as Error, { action: 'updateStock' });
+      setApiResponse(`❌ Network error: ${error} (ID: ${errorId})`);
     } finally {
       setLoading(false);
     }
@@ -189,7 +196,8 @@ export default function ApiDemoPage() {
         setApiResponse(`❌ ${result.error || 'Failed to delete product'}`);
       }
     } catch (error) {
-      setApiResponse(`❌ Network error: ${error}`);
+      const errorId = handleError(error as Error, { action: 'deleteProduct' });
+      setApiResponse(`❌ Network error: ${error} (ID: ${errorId})`);
     } finally {
       setLoading(false);
     }
@@ -249,6 +257,27 @@ export default function ApiDemoPage() {
                     className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
                   >
                     Search &quot;watch&quot;
+                  </button>
+                  <button
+                    onClick={() => fetchProduct(999)}
+                    disabled={loading}
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Test API Error (404)
+                  </button>
+                  <button
+                    onClick={() => {
+                      try {
+                        throw new Error('Test client error');
+                      } catch (error) {
+                        const errorId = handleError(error as Error, { action: 'testClientError' });
+                        setApiResponse(`❌ Client error: ${error} (ID: ${errorId})`);
+                      }
+                    }}
+                    disabled={loading}
+                    className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    Test Client Error
                   </button>
                 </div>
 

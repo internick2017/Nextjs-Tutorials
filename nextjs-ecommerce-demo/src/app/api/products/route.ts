@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { withErrorHandler, withLogging, withRateLimit, compose } from "../../../lib/apiErrorHandler";
+import { ValidationError, NotFoundError, validateRequired, validatePositiveNumber } from "../../../lib/errorHandler";
 
 // Mock products database
 const products = [
@@ -65,8 +67,7 @@ const products = [
 ];
 
 // GET /api/products - Get all products with optional filtering
-export async function GET(request: NextRequest) {
-  try {
+const getHandler = async (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const search = searchParams.get('search');
@@ -112,150 +113,121 @@ export async function GET(request: NextRequest) {
     // Simulate API delay for demonstration
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        products: paginatedProducts,
-        pagination: {
-          currentPage: pageNumber,
-          totalPages,
-          totalProducts,
-          hasNextPage: pageNumber < totalPages,
-          hasPrevPage: pageNumber > 1
-        },
-        filters: {
-          category,
-          search,
-          inStock
-        }
+  return NextResponse.json({
+    success: true,
+    data: {
+      products: paginatedProducts,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages,
+        totalProducts,
+        hasNextPage: pageNumber < totalPages,
+        hasPrevPage: pageNumber > 1
       },
-      message: 'Products retrieved successfully'
-    });
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch products',
-        message: 'An error occurred while retrieving products'
-      },
-      { status: 500 }
-    );
-  }
-}
+      filters: {
+        category,
+        search,
+        inStock
+      }
+    },
+    message: 'Products retrieved successfully'
+  });
+};
+
+export const GET = compose(
+  withLogging,
+  withRateLimit(50, 15 * 60 * 1000), // 50 requests per 15 minutes
+  withErrorHandler
+)(getHandler);
 
 // POST /api/products - Create a new product (for demonstration)
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    // Validate required fields
-    const requiredFields = ['name', 'price', 'description', 'category'];
-    const missingFields = requiredFields.filter(field => !body[field]);
-    
-    if (missingFields.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Missing required fields',
-          missingFields
-        },
-        { status: 400 }
-      );
-    }
+const postHandler = async (request: NextRequest) => {
+  const body = await request.json();
+  
+  // Validate required fields
+  validateRequired(body.name, 'name');
+  validateRequired(body.description, 'description');
+  validateRequired(body.category, 'category');
+  validateRequired(body.price, 'price');
+  
+  // Validate price
+  const price = parseFloat(body.price);
+  validatePositiveNumber(price, 'price');
 
-    // Create new product
-    const newProduct = {
-      id: Math.max(...products.map(p => p.id)) + 1,
-      name: body.name,
-      price: parseFloat(body.price),
-      image: body.image || '/next.svg',
-      description: body.description,
-      category: body.category,
-      inStock: body.inStock !== false,
-      stock: body.stock || 0
-    };
+  // Create new product
+  const newProduct = {
+    id: Math.max(...products.map(p => p.id)) + 1,
+    name: body.name,
+    price,
+    image: body.image || '/next.svg',
+    description: body.description,
+    category: body.category,
+    inStock: body.inStock !== false,
+    stock: body.stock || 0
+  };
 
-    // Add to products array (in a real app, this would be saved to a database)
-    products.push(newProduct);
+  // Add to products array (in a real app, this would be saved to a database)
+  products.push(newProduct);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 300));
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: newProduct,
-        message: 'Product created successfully'
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error('Error creating product:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create product',
-        message: 'An error occurred while creating the product'
-      },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json(
+    {
+      success: true,
+      data: newProduct,
+      message: 'Product created successfully'
+    },
+    { status: 201 }
+  );
+};
+
+export const POST = compose(
+  withLogging,
+  withRateLimit(20, 15 * 60 * 1000), // 20 requests per 15 minutes for creation
+  withErrorHandler
+)(postHandler);
 
 // PUT /api/products - Update multiple products (bulk update)
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { updates } = body; // Array of { id, ...updateFields }
+const putHandler = async (request: NextRequest) => {
+  const body = await request.json();
+  const { updates } = body; // Array of { id, ...updateFields }
 
-    if (!Array.isArray(updates)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid request format',
-          message: 'Updates must be an array'
-        },
-        { status: 400 }
-      );
-    }
-
-    const updatedProducts = [];
-    const errors = [];
-
-    for (const update of updates) {
-      const productIndex = products.findIndex(p => p.id === update.id);
-      
-      if (productIndex === -1) {
-        errors.push({ id: update.id, error: 'Product not found' });
-        continue;
-      }
-
-      // Update product
-      products[productIndex] = { ...products[productIndex], ...update };
-      updatedProducts.push(products[productIndex]);
-    }
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        updated: updatedProducts,
-        errors
-      },
-      message: `${updatedProducts.length} products updated successfully`
-    });
-  } catch (error) {
-    console.error('Error updating products:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update products',
-        message: 'An error occurred while updating products'
-      },
-      { status: 500 }
-    );
+  if (!Array.isArray(updates)) {
+    throw new ValidationError('Updates must be an array');
   }
-}
+
+  const updatedProducts = [];
+  const errors = [];
+
+  for (const update of updates) {
+    const productIndex = products.findIndex(p => p.id === update.id);
+    
+    if (productIndex === -1) {
+      errors.push({ id: update.id, error: 'Product not found' });
+      continue;
+    }
+
+    // Update product
+    products[productIndex] = { ...products[productIndex], ...update };
+    updatedProducts.push(products[productIndex]);
+  }
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 400));
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      updated: updatedProducts,
+      errors
+    },
+    message: `${updatedProducts.length} products updated successfully`
+  });
+};
+
+export const PUT = compose(
+  withLogging,
+  withRateLimit(10, 15 * 60 * 1000), // 10 requests per 15 minutes for bulk updates
+  withErrorHandler
+)(putHandler);

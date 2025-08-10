@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandler, withLogging, withRateLimit, compose } from '../../../../lib/apiErrorHandler';
+import { ValidationError, NotFoundError, validatePositiveNumber } from '../../../../lib/errorHandler';
 
 // Mock products database (same as in the main products route)
 const products = [
@@ -71,286 +73,202 @@ const products = [
 ];
 
 // GET /api/products/[id] - Get a specific product by ID
-export async function GET(
+const getHandler = async (
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = await params;
-    const productId = parseInt(id);
+) => {
+  const { id } = await params;
+  const productId = parseInt(id);
 
-    // Validate ID
-    if (isNaN(productId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid product ID',
-          message: 'Product ID must be a valid number'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Find product
-    const product = products.find(p => p.id === productId);
-
-    if (!product) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Product not found',
-          message: `Product with ID ${productId} does not exist`
-        },
-        { status: 404 }
-      );
-    }
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    return NextResponse.json({
-      success: true,
-      data: product,
-      message: 'Product retrieved successfully'
-    });
-  } catch (error) {
-    console.error('Error fetching product:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch product',
-        message: 'An error occurred while retrieving the product'
-      },
-      { status: 500 }
-    );
+  // Validate ID
+  if (isNaN(productId)) {
+    throw new ValidationError('Product ID must be a valid number');
   }
-}
+
+  // Find product
+  const product = products.find(p => p.id === productId);
+
+  if (!product) {
+    throw new NotFoundError(`Product with ID ${productId} does not exist`);
+  }
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  return NextResponse.json({
+    success: true,
+    data: product,
+    message: 'Product retrieved successfully'
+  });
+};
+
+export const GET = compose(
+  withLogging,
+  withRateLimit(100, 15 * 60 * 1000), // 100 requests per 15 minutes
+  withErrorHandler
+)((request: NextRequest, ...args: unknown[]) => {
+  const params = args[0] as { params: { id: string } };
+  return getHandler(request, params);
+});
 
 // PUT /api/products/[id] - Update a specific product
-export async function PUT(
+const putHandler = async (
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = await params;
-    const productId = parseInt(id);
-    const body = await request.json();
+) => {
+  const { id } = await params;
+  const productId = parseInt(id);
+  const body = await request.json();
 
-    // Validate ID
-    if (isNaN(productId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid product ID',
-          message: 'Product ID must be a valid number'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Find product index
-    const productIndex = products.findIndex(p => p.id === productId);
-
-    if (productIndex === -1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Product not found',
-          message: `Product with ID ${productId} does not exist`
-        },
-        { status: 404 }
-      );
-    }
-
-    // Update product (merge with existing data)
-    const updatedProduct = {
-      ...products[productIndex],
-      ...body,
-      id: productId // Ensure ID cannot be changed
-    };
-
-    // Validate price if provided
-    if (body.price !== undefined) {
-      const price = parseFloat(body.price);
-      if (isNaN(price) || price < 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Invalid price',
-            message: 'Price must be a valid positive number'
-          },
-          { status: 400 }
-        );
-      }
-      updatedProduct.price = price;
-    }
-
-    // Update in array
-    products[productIndex] = updatedProduct;
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    return NextResponse.json({
-      success: true,
-      data: updatedProduct,
-      message: 'Product updated successfully'
-    });
-  } catch (error) {
-    console.error('Error updating product:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update product',
-        message: 'An error occurred while updating the product'
-      },
-      { status: 500 }
-    );
+  // Validate ID
+  if (isNaN(productId)) {
+    throw new ValidationError('Product ID must be a valid number');
   }
-}
+
+  // Find product index
+  const productIndex = products.findIndex(p => p.id === productId);
+
+  if (productIndex === -1) {
+    throw new NotFoundError(`Product with ID ${productId} does not exist`);
+  }
+
+  // Validate price if provided
+  if (body.price !== undefined) {
+    const price = parseFloat(body.price);
+    validatePositiveNumber(price, 'price');
+    body.price = price;
+  }
+
+  // Update product (merge with existing data)
+  const updatedProduct = {
+    ...products[productIndex],
+    ...body,
+    id: productId // Ensure ID cannot be changed
+  };
+
+  // Update in array
+  products[productIndex] = updatedProduct;
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 400));
+
+  return NextResponse.json({
+    success: true,
+    data: updatedProduct,
+    message: 'Product updated successfully'
+  });
+};
+
+export const PUT = compose(
+  withLogging,
+  withRateLimit(30, 15 * 60 * 1000), // 30 requests per 15 minutes
+  withErrorHandler
+)((request: NextRequest, ...args: unknown[]) => {
+  const params = args[0] as { params: { id: string } };
+  return putHandler(request, params);
+});
 
 // DELETE /api/products/[id] - Delete a specific product
-export async function DELETE(
-  request: NextRequest,
+const deleteHandler = async (
+  _request: NextRequest,
   { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = await params;
-    const productId = parseInt(id);
+) => {
+  const { id } = params;
+  const productId = parseInt(id);
 
-    // Validate ID
-    if (isNaN(productId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid product ID',
-          message: 'Product ID must be a valid number'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Find product index
-    const productIndex = products.findIndex(p => p.id === productId);
-
-    if (productIndex === -1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Product not found',
-          message: `Product with ID ${productId} does not exist`
-        },
-        { status: 404 }
-      );
-    }
-
-    // Store deleted product for response
-    const deletedProduct = products[productIndex];
-
-    // Remove from array
-    products.splice(productIndex, 1);
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    return NextResponse.json({
-      success: true,
-      data: deletedProduct,
-      message: 'Product deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to delete product',
-        message: 'An error occurred while deleting the product'
-      },
-      { status: 500 }
-    );
+  // Validate ID
+  if (isNaN(productId)) {
+    throw new ValidationError('Product ID must be a valid number');
   }
-}
+
+  // Find product index
+  const productIndex = products.findIndex(p => p.id === productId);
+
+  if (productIndex === -1) {
+    throw new NotFoundError(`Product with ID ${productId} does not exist`);
+  }
+
+  // Store deleted product for response
+  const deletedProduct = products[productIndex];
+
+  // Remove from array
+  products.splice(productIndex, 1);
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  return NextResponse.json({
+    success: true,
+    data: deletedProduct,
+    message: 'Product deleted successfully'
+  });
+};
+
+export const DELETE = compose(
+  withLogging,
+  withRateLimit(20, 15 * 60 * 1000), // 20 requests per 15 minutes
+  withErrorHandler
+)((request: NextRequest, ...args: unknown[]) => {
+  const params = args[0] as { params: { id: string } };
+  return deleteHandler(request, params);
+});
 
 // PATCH /api/products/[id] - Partially update a product (e.g., just stock)
-export async function PATCH(
+const patchHandler = async (
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = await params;
-    const productId = parseInt(id);
-    const body = await request.json();
+) => {
+  const { id } = params;
+  const productId = parseInt(id);
+  const body = await request.json();
 
-    // Validate ID
-    if (isNaN(productId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid product ID',
-          message: 'Product ID must be a valid number'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Find product index
-    const productIndex = products.findIndex(p => p.id === productId);
-
-    if (productIndex === -1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Product not found',
-          message: `Product with ID ${productId} does not exist`
-        },
-        { status: 404 }
-      );
-    }
-
-    // Common patch operations
-    if (body.action === 'updateStock') {
-      const { quantity } = body;
-      if (typeof quantity !== 'number' || quantity < 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Invalid quantity',
-            message: 'Quantity must be a non-negative number'
-          },
-          { status: 400 }
-        );
-      }
-
-      products[productIndex].stock = quantity;
-      products[productIndex].inStock = quantity > 0;
-    } else if (body.action === 'toggleAvailability') {
-      products[productIndex].inStock = !products[productIndex].inStock;
-    } else {
-      // General patch - only update provided fields
-      Object.keys(body).forEach(key => {
-        if (key !== 'id' && body[key] !== undefined) {
-          (products[productIndex] as Record<string, unknown>)[key] = body[key];
-        }
-      });
-    }
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    return NextResponse.json({
-      success: true,
-      data: products[productIndex],
-      message: 'Product updated successfully'
-    });
-  } catch (error) {
-    console.error('Error patching product:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to patch product',
-        message: 'An error occurred while updating the product'
-      },
-      { status: 500 }
-    );
+  // Validate ID
+  if (isNaN(productId)) {
+    throw new ValidationError('Product ID must be a valid number');
   }
-}
+
+  // Find product index
+  const productIndex = products.findIndex(p => p.id === productId);
+
+  if (productIndex === -1) {
+    throw new NotFoundError(`Product with ID ${productId} does not exist`);
+  }
+
+  // Common patch operations
+  if (body.action === 'updateStock') {
+    const { quantity } = body;
+    if (typeof quantity !== 'number' || quantity < 0) {
+      throw new ValidationError('Quantity must be a non-negative number');
+    }
+
+    products[productIndex].stock = quantity;
+    products[productIndex].inStock = quantity > 0;
+  } else if (body.action === 'toggleAvailability') {
+    products[productIndex].inStock = !products[productIndex].inStock;
+  } else {
+    // General patch - only update provided fields
+    Object.keys(body).forEach(key => {
+      if (key !== 'id' && body[key] !== undefined) {
+        (products[productIndex] as Record<string, unknown>)[key] = body[key];
+      }
+    });
+  }
+
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 200));
+
+  return NextResponse.json({
+    success: true,
+    data: products[productIndex],
+    message: 'Product updated successfully'
+  });
+};
+
+export const PATCH = compose(
+  withLogging,
+  withRateLimit(30, 15 * 60 * 1000), // 30 requests per 15 minutes
+  withErrorHandler
+)((request: NextRequest, ...args: unknown[]) => {
+  const params = args[0] as { params: { id: string } };
+  return patchHandler(request, params);
+});
