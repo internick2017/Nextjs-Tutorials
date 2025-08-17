@@ -14,6 +14,7 @@ export default function Navigation() {
     { href: '/cart', label: 'Cart' },
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/api-demo', label: 'API Demo' },
+    { href: '/error-handling-demo', label: 'Error Demo' },
     { href: '/login', label: 'Login' },
   ];
 
@@ -32,7 +33,7 @@ export default function Navigation() {
             <Link href="/" className="text-xl font-bold text-blue-600">
               NextJS Store
             </Link>
-            
+
             {/* Desktop Navigation */}
             <div className="hidden md:flex space-x-6">
               {navLinks.map((link) => (
@@ -49,7 +50,7 @@ export default function Navigation() {
                 </Link>
               ))}
             </div>
-            
+
             {/* Mobile menu button */}
             <button
               className="md:hidden p-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-gray-100 transition-colors"
@@ -65,14 +66,14 @@ export default function Navigation() {
               </svg>
             </button>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <Link href="/cart" className="text-gray-600 hover:text-blue-600 transition-colors">
               🛒 Cart
             </Link>
           </div>
         </div>
-        
+
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4">
